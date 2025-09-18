@@ -15,6 +15,7 @@ from enum import Enum
 
 import torch
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
+from transformers.utils import is_flash_attn_2_available
 from huggingface_hub.errors import HfHubHTTPError
 
 
@@ -26,7 +27,7 @@ class CliModelId(str, Enum):
 app = typer.Typer()
 
 
-def process_audio(file_path: Path, model_id: str) -> None:
+def process_audio(file_path: Path, model_id: str, prompt: str | None) -> None:
     """Transcribe a single audio file and save the result to a JSON file."""
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     dtype = torch.float16 if torch.cuda.is_available() else torch.float32
@@ -49,12 +50,32 @@ def process_audio(file_path: Path, model_id: str) -> None:
         feature_extractor=processor.feature_extractor,
         dtype=dtype,
         device=device,
+        # mode_kwargs is used for faster inference
+        model_kwargs={"attn_implementation": "flash_attention_2"}
+        if is_flash_attn_2_available()
+        else {"attn_implementation": "sdpa"},
         return_timestamps=True,
     )
 
     start_time = time.perf_counter()
+    generate_kwargs = {
+        "task": "transcribe",
+        "language": "et",
+        "repetition_penalty": 1.2,  # used to improve keyword recognition
+        "no_repeat_ngram_size": 3,  # used to improve keyword recognition
+    }
+
+    # Add prompt if provided
+    if prompt:
+        prompt_ids = processor.tokenizer(
+            text=prompt, add_special_tokens=False, return_tensors="pt"
+        ).input_ids.to(device)
+        if prompt_ids.numel() > 0:
+            generate_kwargs["prompt_ids"] = prompt_ids[0]
+
     result = pipe(
-        str(file_path), generate_kwargs={"task": "transcribe", "language": "et"}
+        str(file_path),
+        generate_kwargs=generate_kwargs,
     )
     end_time = time.perf_counter()
     inference_time = end_time - start_time
@@ -101,11 +122,19 @@ def parse(
             show_default=True,
         ),
     ],
+    prompt: Annotated[
+        str | None,
+        typer.Option(
+            "--prompt",
+            "-p",
+            help="A prompt to guide the transcription (optional).",
+        ),
+    ] = None,
 ) -> None:
     """
     Transcribe an audio file.
     """
-    process_audio(file_path, model_id.value)
+    process_audio(file_path, model_id.value, prompt)
 
 
 if __name__ == "__main__":

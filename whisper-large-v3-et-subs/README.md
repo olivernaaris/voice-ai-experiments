@@ -22,12 +22,14 @@ docker build --pull -t whisper-large-et-subs .
 # Run fine-tuned whisper-3-large with estonian subtitles
 uv run main.py \
  -f tmpyegdo2jo.wav \
- -m taltechnlp/whisper-large-v3-et-sub
+ -m taltechnlp/whisper-large-v3-et-subs \
+ -p "Konsiori, kakskümmend üheksa, sada viiskümmend, sada kuuskümmend"
 
 # Run default whisper-3-large
 uv run main.py \
  -f tmpyegdo2jo.wav \
- -m openai/whisper-large-v3
+ -m openai/whisper-large-v3 \
+ -p "Konsiori, kakskümmend üheksa, sada viiskümmend, sada kuuskümmend"
 ```
 
 ## Run the Docker container  - not working yet

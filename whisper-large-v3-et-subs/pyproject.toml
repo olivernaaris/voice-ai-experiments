@@ -13,4 +13,5 @@ dependencies = [
    "accelerate==1.10.1",
    "hf-transfer==0.1.9",
    "orjson==3.11.3",
+   "optimum>=1.27.0",
 ]
