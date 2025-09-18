@@ -1,0 +1,4 @@
+*.wav
+.venv
+*.egg-info
+*.json
