@@ -7,11 +7,11 @@ See Hugging Face model: https://huggingface.co/TalTechNLP/whisper-large-v3-et-su
 
 ## Prerequisites
 
-ffmpeg
-rust
+- ffmpeg
+- rust
 
 
-## Build the Docker image
+## Build the Docker image - not working yet
 
 ```bash
 docker build --pull -t whisper-large-et-subs .
@@ -30,12 +30,10 @@ uv run main.py \
  -m openai/whisper-large-v3
 ```
 
-## Run the Docker container
+## Run the Docker container  - not working yet
 
 ```bash
 docker run --rm \
   -v "$(pwd)":/app \
   whisper-large-et-subs tmpyegdo2jo.wav
 ```
-
-The above command mounts the current directory into `/app` inside the container and runs the transcription on `tmpyegdo2jo.wav`. The output will be printed to stdout using the configured logging.
