@@ -1,7 +1,5 @@
 #!/usr/bin/env uv run
 
-"""Local entry point: python -m app.main --file_path input.wav ..."""
-
 from __future__ import annotations
 import argparse
 from pipeline import WhisperDiarizationPipeline

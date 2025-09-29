@@ -1,5 +1,3 @@
-"""Speech-to-text + diarization pipeline (shared by local & Cog)."""
-
 from __future__ import annotations
 import base64
 import subprocess
@@ -19,24 +17,8 @@ from pyannote.audio import Pipeline as PyannotePipeline
 from faster_whisper.vad import VadOptions
 from preprocess import preprocess_audio
 
-
-class Output:
-    def __init__(
-        self,
-        segments: List[Dict],
-        language: Optional[str] = None,
-        num_speakers: Optional[int] = None,
-    ) -> None:
-        self.segments = segments
-        self.language = language
-        self.num_speakers = num_speakers
-
-    def to_dict(self) -> Dict:
-        return {
-            "segments": self.segments,
-            "language": self.language,
-            "num_speakers": self.num_speakers,
-        }
+# Custom imports
+from schema.outputs import Output
 
 
 class WhisperDiarizationPipeline:
