@@ -3,3 +3,4 @@
 *.egg-info
 *.json
 .ruff_cache
+__pycache__

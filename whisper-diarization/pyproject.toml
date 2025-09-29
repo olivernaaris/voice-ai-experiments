@@ -1,0 +1,29 @@
+[project]
+name = "whisper-diarization"
+version = "0.1.0"
+description = "whisper-diarization prototpye."
+readme = "README.md"
+requires-python = "==3.10.*"
+dependencies = [
+    "torch==2.3.1",
+    "requests",
+    "pyannote.audio>=3.3.1",
+    "faster-whisper==1.2.0",
+    "ctranslate2==4.5.0",
+    "torchvision>=0.15.2",
+    "torchtext>=0.15.2",
+    "numpy==1.26.4",
+    "tenacity",
+    "pandas",
+    "scipy>=1.15.3",
+    "noisereduce>=3.0.3",
+    "transformers[sentencepiece,torch]==4.56.1",
+    "typer==0.17.4",
+    "loguru==0.7.3",
+    "datasets",
+    "accelerate==1.10.1",
+    "hf-transfer==0.1.9",
+    "orjson==3.11.3",
+    "optimum>=1.27.0",
+    "huggingface-hub>=0.24.1",
+]
