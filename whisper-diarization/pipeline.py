@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 from faster_whisper import WhisperModel
 from pyannote.audio import Pipeline as PyannotePipeline
+from pyannote.audio.pipelines.utils.hook import ProgressHook
 from faster_whisper.vad import VadOptions
 
 # Custom imports
@@ -47,8 +48,8 @@ class WhisperDiarizationPipeline:
         token = check_hf_token()
         logger.info("Using Hugging Face token for diarization model.")
         self.diarization_model = PyannotePipeline.from_pretrained(
-            "pyannote/speaker-diarization-3.1",
-            use_auth_token=token,
+            "pyannote/speaker-diarization-community-1",
+            token=token,
         ).to(torch.device(model_config.device))
 
     def predict(
@@ -267,13 +268,16 @@ class WhisperDiarizationPipeline:
 
     def _diarize_audio(self, audio_file_wav, num_speakers=None):
         waveform, sample_rate = torchaudio.load(audio_file_wav)
-        diarization = self.diarization_model(
-            {"waveform": waveform, "sample_rate": sample_rate},
-            num_speakers=num_speakers,
-        )
+        with ProgressHook() as hook:
+            diarization = self.diarization_model(
+                {"waveform": waveform, "sample_rate": sample_rate},
+                num_speakers=num_speakers,
+                hook=hook,
+            )
 
         diarize_segments = []
-        diarization_list = list(diarization.itertracks(yield_label=True))
+        annotation = diarization.speaker_diarization
+        diarization_list = list(annotation.itertracks(yield_label=True))
         for turn, _, speaker in diarization_list:
             diarize_segments.append(
                 {"start": turn.start, "end": turn.end, "speaker": speaker}
