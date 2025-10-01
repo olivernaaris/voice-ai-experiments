@@ -22,5 +22,6 @@ Execute the script from your terminal, providing the repository ID and a local n
 --file_path tmpyegdo2jo.wav \
 --device cpu \
 --language et \
---model_name /Users/olivernaaris/.cache/huggingface/hub/whisper-large-v3-turbo-et-verbatim-ct2/ct2
+--model_name /Users/olivernaaris/.cache/huggingface/hub/whisper-large-v3-turbo-et-verbatim-ct2/ct2 \
+--output_filename whisper-large-v3-turbo-et-verbatim-ct2
 ```

@@ -4,11 +4,11 @@ from datetime import datetime
 from pathlib import Path
 
 
-def write_json_file(model_id: str, content: dict) -> None:
+def write_json_file(output_filename_base: str, content: dict) -> None:
     """Generate a filename and write dictionary content to a JSON file."""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    safe_model_id = model_id.replace("/", "_")
-    output_filename = f"{safe_model_id}_{timestamp}.json"
+
+    output_filename = f"{output_filename_base}_{timestamp}.json"
     output_path = Path(output_filename)
 
     with open(output_path, "wb") as f:

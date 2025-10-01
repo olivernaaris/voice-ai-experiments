@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 import argparse
+from pathlib import Path
 from pipeline import WhisperDiarizationPipeline
 
 from utils import write_json_file
@@ -27,6 +28,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--model_name", type=str, default="whisper-large-v3-turbo-et-verbatim-ct2"
     )
+    p.add_argument("--output_filename", type=str, default=None)
     return p
 
 
@@ -56,7 +58,15 @@ def main() -> None:
     )
 
     print(result.to_dict())
-    write_json_file(model_id=args.model_name, content=result.to_dict())
+    if args.output_filename:
+        output_filename_base = args.output_filename
+    else:
+        output_filename_base = Path(__file__).parent / args.model_name
+
+    write_json_file(
+        output_filename_base=str(output_filename_base),
+        content=result.to_dict(),
+    )
 
 
 if __name__ == "__main__":
