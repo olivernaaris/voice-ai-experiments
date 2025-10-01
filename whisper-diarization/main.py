@@ -96,7 +96,7 @@ def main(
         target_dBFS=target_dBFS,
     )
 
-    logger.info(result.to_dict())
+    logger.info(result.model_dump_json(indent=2))
     if output_filename:
         output_filename_base = output_filename
     else:
@@ -104,7 +104,7 @@ def main(
 
     write_json_file(
         output_filename_base=str(output_filename_base),
-        content=result.to_dict(),
+        content=result.model_dump(),
     )
 
 

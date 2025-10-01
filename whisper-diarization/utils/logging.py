@@ -1,8 +1,10 @@
 import sys
 
-from loguru import logger
+from loguru import logger as loguru_logger
 
-logger.remove()
-logger.add(sys.stderr, level="INFO")
+loguru_logger.remove()
+loguru_logger.add(sys.stderr, level="INFO")
+
+logger = loguru_logger
 
 __all__ = ["logger"]

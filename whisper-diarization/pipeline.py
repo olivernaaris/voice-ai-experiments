@@ -15,11 +15,10 @@ from faster_whisper.vad import VadOptions
 
 # Custom imports
 from preprocess import preprocess_audio
-from audio_utils import get_file, get_audio_channels, split_stereo_channels
-from utils.logging import logger
+from utils import get_file, get_audio_channels, split_stereo_channels, logger
 
 # Custom schemas
-from schema.outputs import Output
+from schema import Output
 
 
 class WhisperDiarizationPipeline:
@@ -93,7 +92,11 @@ class WhisperDiarizationPipeline:
                         audio_for_model, num_speakers, prompt or "", language, translate
                     )
                 )
-                return Output(segments, detected_language, detected_num_speakers)
+                return Output(
+                    segments=segments,
+                    language=detected_language,
+                    num_speakers=detected_num_speakers,
+                )
 
             else:
                 logger.info("Spliting channels")
@@ -152,7 +155,9 @@ class WhisperDiarizationPipeline:
                 all_segments = self.merge_stereo_words(ch1_segments, ch2_segments)
 
                 detected_language = info1.language or info2.language
-                return Output(all_segments, detected_language, 2)
+                return Output(
+                    segments=all_segments, language=detected_language, num_speakers=2
+                )
 
         except Exception as e:
             raise RuntimeError(f"Error running inference: {e}") from e
