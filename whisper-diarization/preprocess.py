@@ -96,6 +96,7 @@ def preprocess_audio(
     3 - Sanitization + Filter + ReduceNoise
     4 - Sanitization + Filter + ReduceNoise + Normalization
     """
+    logger.info(f"Preprocessing audio with level: {preprocess_level}")
 
     with tempfile.TemporaryDirectory() as tmpdir:
         temp1 = f"{tmpdir}/stage1.wav"
