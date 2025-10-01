@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import os
 import time
 import torch
@@ -8,7 +6,6 @@ import shutil
 import re
 import pandas as pd
 import numpy as np
-from typing import List, Dict, Optional, Tuple
 from faster_whisper import WhisperModel
 from pyannote.audio import Pipeline as PyannotePipeline
 from faster_whisper.vad import VadOptions
@@ -18,7 +15,7 @@ from preprocess import preprocess_audio
 from utils import get_file, get_audio_channels, split_stereo_channels, logger
 
 # Custom schemas
-from schema import Output
+from schema import DiarizationEntry, Output, Segment
 
 
 class WhisperDiarizationPipeline:
@@ -49,13 +46,13 @@ class WhisperDiarizationPipeline:
 
     def predict(
         self,
-        file_string: Optional[str] = None,
-        file_url: Optional[str] = None,
-        file_path: Optional[str] = None,
-        num_speakers: Optional[int] = None,
+        file_string: str | None = None,
+        file_url: str | None = None,
+        file_path: str | None = None,
+        num_speakers: int | None = None,
         translate: bool = False,
-        language: Optional[str] = None,
-        prompt: Optional[str] = None,
+        language: str | None = None,
+        prompt: str | None = None,
         preprocess: int = 4,
         highpass_freq: int = 45,
         lowpass_freq: int = 8000,
@@ -189,11 +186,11 @@ class WhisperDiarizationPipeline:
     def speech_to_text(
         self,
         audio_file_wav: str,
-        num_speakers: Optional[int] = None,
+        num_speakers: int | None = None,
         prompt: str = "",
-        language: Optional[str] = None,
+        language: str | None = None,
         translate: bool = False,
-    ) -> Tuple[List[Dict], int, str]:
+    ) -> tuple[list[dict], int, str]:
         time_start = time.time()
 
         # segments, transcript_info = self._transcribe_audio_mock(
@@ -293,7 +290,9 @@ class WhisperDiarizationPipeline:
             speaker = fallback_speaker or "UNKNOWN"
         return speaker
 
-    def _merge_segments_with_diarization(self, segments, diarize_segments):
+    def _merge_segments_with_diarization(
+        self, segments: list[Segment], diarize_segments: list[DiarizationEntry]
+    ) -> list[Segment]:
         diarize_df = pd.DataFrame(diarize_segments)
         final_segments = []
 
@@ -328,7 +327,7 @@ class WhisperDiarizationPipeline:
 
         return final_segments
 
-    def _group_segments(self, segments):
+    def _group_segments(self, segments: list[Segment]) -> list[Segment]:
         if not segments:
             return []
 
@@ -356,8 +355,12 @@ class WhisperDiarizationPipeline:
         return grouped_segments
 
     def merge_stereo_words(
-        self, ch1_segments, ch2_segments, overlap_tolerance=0, merge_margin=1
-    ):
+        self,
+        ch1_segments: list[Segment],
+        ch2_segments: list[Segment],
+        overlap_tolerance: float = 0.0,
+        merge_margin: float = 1.0,
+    ) -> list[Segment]:
         words = []
         for seg in ch1_segments + ch2_segments:
             for w in seg["words"]:

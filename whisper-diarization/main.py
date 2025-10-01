@@ -1,12 +1,11 @@
 #!/usr/bin/env uv run
 
-from __future__ import annotations
-
 from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
 
+# Custom imports
 from pipeline import WhisperDiarizationPipeline
 from utils import logger, write_json_file
 

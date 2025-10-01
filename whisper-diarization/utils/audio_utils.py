@@ -1,15 +1,12 @@
-from __future__ import annotations
-
 import base64
 import subprocess
 import os
 import requests
 import tempfile
 import shutil
-from typing import Tuple
 
 
-def get_file(file_path=None, file_url=None, file_string=None) -> Tuple[str, str]:
+def get_file(file_path=None, file_url=None, file_string=None) -> tuple[str, str]:
     """
     Handles any input type and converts it to PCM 16kHz WAV.
     Returns the path to the converted file and temp directory.
@@ -78,7 +75,7 @@ def get_audio_channels(file_path: str) -> int:
     return int(result.stdout.strip())
 
 
-def split_stereo_channels(file_path: str, temp_dir: str) -> Tuple[str, str]:
+def split_stereo_channels(file_path: str, temp_dir: str) -> tuple[str, str]:
     """Splits stereo audio into two mono files (left and right channel)."""
     ch1_path = os.path.join(temp_dir, "channel1.wav")
     ch2_path = os.path.join(temp_dir, "channel2.wav")
