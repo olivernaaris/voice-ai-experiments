@@ -1,67 +1,106 @@
 #!/usr/bin/env uv run
 
 from __future__ import annotations
-import argparse
+
 from pathlib import Path
+from typing import Annotated, Optional
+
+import typer
+
 from pipeline import WhisperDiarizationPipeline
+from utils import logger, write_json_file
 
-from utils import write_json_file
-
-
-def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(description="Local runner for Whisper + Diarization")
-    p.add_argument("--file_string", type=str, default=None)
-    p.add_argument("--file_url", type=str, default=None)
-    p.add_argument("--file_path", type=str, default=None)
-    p.add_argument("--num_speakers", type=int, default=None)
-    p.add_argument("--translate", type=bool, default=False)
-    p.add_argument("--language", type=str, default=None)
-    p.add_argument("--prompt", type=str, default=None)
-    p.add_argument("--preprocess", type=int, default=0, choices=[0, 1, 2, 3, 4])
-    p.add_argument("--highpass_freq", type=int, default=45)
-    p.add_argument("--lowpass_freq", type=int, default=8000)
-    p.add_argument("--prop_decrease", type=float, default=0.3)
-    p.add_argument("--stationary", type=bool, default=True)
-    p.add_argument("--target_dBFS", type=float, default=-18.0)
-    p.add_argument("--device", type=str, default="cpu", choices=["cpu", "cuda"])
-    p.add_argument("--compute_type", type=str, default="int8")
-    p.add_argument(
-        "--model_name", type=str, default="whisper-large-v3-turbo-et-verbatim-ct2"
-    )
-    p.add_argument("--output_filename", type=str, default=None)
-    return p
+app = typer.Typer()
 
 
-def main() -> None:
-    args = build_parser().parse_args()
-    print(f"DEBUG --> Args: {args}")
+@app.command()
+def main(
+    file_string: Annotated[
+        Optional[str],
+        typer.Option("--file_string", help="File content as a base64 encoded string."),
+    ] = None,
+    file_url: Annotated[
+        Optional[str], typer.Option("--file_url", help="URL to an audio file.")
+    ] = None,
+    file_path: Annotated[
+        Optional[Path], typer.Option("--file_path", help="Path to an audio file.")
+    ] = None,
+    num_speakers: Annotated[
+        Optional[int], typer.Option("--num_speakers", help="Number of speakers.")
+    ] = None,
+    translate: Annotated[
+        bool, typer.Option(help="Translate the audio to English.")
+    ] = False,
+    language: Annotated[
+        Optional[str], typer.Option(help="Language of the audio.")
+    ] = None,
+    prompt: Annotated[
+        Optional[str], typer.Option(help="Initial prompt for the model.")
+    ] = None,
+    preprocess: Annotated[
+        int,
+        typer.Option(help="Preprocessing level (0-4).", min=0, max=4, clamp=True),
+    ] = 0,
+    highpass_freq: Annotated[
+        int, typer.Option("--highpass_freq", help="Highpass filter frequency.")
+    ] = 45,
+    lowpass_freq: Annotated[
+        int, typer.Option("--lowpass_freq", help="Lowpass filter frequency.")
+    ] = 8000,
+    prop_decrease: Annotated[
+        float, typer.Option("--prop_decrease", help="Proportion to decrease noise.")
+    ] = 0.3,
+    stationary: Annotated[
+        bool, typer.Option(help="Whether the noise is stationary.")
+    ] = True,
+    target_dBFS: Annotated[
+        float, typer.Option("--target_dBFS", help="Target dBFS for normalization.")
+    ] = -18.0,
+    device: Annotated[
+        str, typer.Option(help="Device to use for computation (cpu or cuda).")
+    ] = "cpu",
+    compute_type: Annotated[
+        str, typer.Option("--compute_type", help="Compute type for the model.")
+    ] = "int8",
+    model_name: Annotated[
+        str, typer.Option("--model_name", help="Name of the Whisper model to use.")
+    ] = "whisper-large-v3-turbo-et-verbatim-ct2",
+    output_filename: Annotated[
+        Optional[str],
+        typer.Option("--output_filename", help="Base name for the output JSON file."),
+    ] = None,
+) -> None:
+    """
+    Local runner for Whisper + Diarization.
+    """
+    logger.debug("Starting pipeline with provided arguments.")
     pipeline = WhisperDiarizationPipeline(
-        device=args.device,
-        compute_type=args.compute_type,
-        model_name=args.model_name,
+        device=device,
+        compute_type=compute_type,
+        model_name=model_name,
     )
 
     result = pipeline.predict(
-        file_string=args.file_string,
-        file_url=args.file_url,
-        file_path=args.file_path,
-        num_speakers=args.num_speakers,
-        translate=args.translate,
-        language=args.language,
-        prompt=args.prompt,
-        preprocess=args.preprocess,
-        highpass_freq=args.highpass_freq,
-        lowpass_freq=args.lowpass_freq,
-        prop_decrease=args.prop_decrease,
-        stationary=args.stationary,
-        target_dBFS=args.target_dBFS,
+        file_string=file_string,
+        file_url=file_url,
+        file_path=str(file_path) if file_path else None,
+        num_speakers=num_speakers,
+        translate=translate,
+        language=language,
+        prompt=prompt,
+        preprocess=preprocess,
+        highpass_freq=highpass_freq,
+        lowpass_freq=lowpass_freq,
+        prop_decrease=prop_decrease,
+        stationary=stationary,
+        target_dBFS=target_dBFS,
     )
 
-    print(result.to_dict())
-    if args.output_filename:
-        output_filename_base = args.output_filename
+    logger.info(result.to_dict())
+    if output_filename:
+        output_filename_base = output_filename
     else:
-        output_filename_base = Path(__file__).parent / args.model_name
+        output_filename_base = Path(__file__).parent / model_name
 
     write_json_file(
         output_filename_base=str(output_filename_base),
@@ -70,4 +109,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    app()

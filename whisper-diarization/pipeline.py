@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import os
 import time
 import torch
@@ -15,6 +16,7 @@ from faster_whisper.vad import VadOptions
 # Custom imports
 from preprocess import preprocess_audio
 from audio_utils import get_file, get_audio_channels, split_stereo_channels
+from utils.logging import logger
 
 # Custom schemas
 from schema.outputs import Output
@@ -29,7 +31,7 @@ class WhisperDiarizationPipeline:
     ) -> None:
         """Load models into memory."""
 
-        print(f"DEBUG --> Setup with {model_name}, {device}, {compute_type}")
+        logger.info(f"Setup with {model_name}, {device}, {compute_type}")
         self.model = WhisperModel(
             model_size_or_path=model_name,
             device=device,
@@ -40,7 +42,7 @@ class WhisperDiarizationPipeline:
             raise ValueError(
                 "Hugging Face token not found. Please set the HF_TOKEN environment variable."
             )
-        print("DEBUG --> Using Hugging Face token for diarization model.")
+        logger.info("Using Hugging Face token for diarization model.")
         self.diarization_model = PyannotePipeline.from_pretrained(
             "pyannote/speaker-diarization-3.1",
             use_auth_token=token,
@@ -67,7 +69,7 @@ class WhisperDiarizationPipeline:
 
         try:
             num_channels = get_audio_channels(temp_input)
-            print(f"DEBUG --> Audio with {num_channels} channels")
+            logger.info(f"Audio with {num_channels} channels")
             if num_channels == 1:
                 temp_processed = os.path.join(temp_dir, "input_processed.wav")
                 if preprocess > 0:
@@ -85,7 +87,7 @@ class WhisperDiarizationPipeline:
                 else:
                     audio_for_model = temp_input
 
-                print("DEBUG --> Starting transcribing mono")
+                logger.info("Starting transcribing mono")
                 segments, detected_num_speakers, detected_language = (
                     self.speech_to_text(
                         audio_for_model, num_speakers, prompt or "", language, translate
@@ -94,7 +96,7 @@ class WhisperDiarizationPipeline:
                 return Output(segments, detected_language, detected_num_speakers)
 
             else:
-                print("DEBUG --> Spliting channels")
+                logger.info("Spliting channels")
                 ch1_path, ch2_path = split_stereo_channels(temp_input, temp_dir)
                 ch1_proc = os.path.join(temp_dir, "ch1_proc.wav")
                 ch2_proc = os.path.join(temp_dir, "ch2_proc.wav")
@@ -124,7 +126,7 @@ class WhisperDiarizationPipeline:
                     ch1_proc = ch1_path
                     ch2_proc = ch2_path
 
-                print("DEBUG --> Starting transcribing stereo channel 0")
+                logger.info("Starting transcribing stereo channel 0")
                 # ch1_segments, info1 = self._transcribe_audio_ch0_mock(ch1_proc, language, prompt or "", translate)
                 ch1_segments, info1 = self._transcribe_audio(
                     ch1_proc, language, prompt or "", translate
@@ -133,9 +135,8 @@ class WhisperDiarizationPipeline:
                     s["speaker"] = "SPEAKER_00"
                     for w in s["words"]:
                         w["speaker"] = "SPEAKER_00"
-                # print(f"DEBUG --> Transcription stereo channel 0 {ch1_segments}")
 
-                print("DEBUG --> Starting transcribing stereo channel 1")
+                logger.info("Starting transcribing stereo channel 1")
                 # ch2_segments, info2 = self._transcribe_audio_ch1_mock(ch2_proc, language, prompt or "", translate)
                 ch2_segments, info2 = self._transcribe_audio(
                     ch2_proc, language, prompt or "", translate
@@ -146,7 +147,7 @@ class WhisperDiarizationPipeline:
                         w["speaker"] = "SPEAKER_01"
                 # print(f"DEBUG --> Transcription stereo channel 1 {ch2_segments}")
 
-                print("DEBUG --> Merging segments")
+                logger.info("Merging segments")
                 # all_segments = sorted(ch1_segments + ch2_segments, key=lambda x: x["start"])
                 all_segments = self.merge_stereo_words(ch1_segments, ch2_segments)
 
@@ -177,8 +178,6 @@ class WhisperDiarizationPipeline:
             try:
                 if temp_dir and os.path.exists(temp_dir):
                     shutil.rmtree(temp_dir, ignore_errors=True)
-                # if 'temp_dir' in locals() and temp_dir:
-                #     temp_dir.cleanup()
             except Exception:
                 pass
 
@@ -196,20 +195,18 @@ class WhisperDiarizationPipeline:
         segments, transcript_info = self._transcribe_audio(
             audio_file_wav, language, prompt, translate
         )
-        print(f"DEBUG --> Finished transcribing, {len(segments)} segments")
+        logger.info(f"Finished transcribing, {len(segments)} segments")
 
-        print("DEBUG --> Starting diarization")
+        logger.info("Starting diarization")
         # diarization, detected_num_speakers = self._diarize_audio_mock(
         diarization, detected_num_speakers = self._diarize_audio(
             audio_file_wav, num_speakers
         )
-        print(
-            f"DEBUG --> Finished diarization, {detected_num_speakers} speakers detected"
-        )
+        logger.info(f"Finished diarization, {detected_num_speakers} speakers detected")
 
-        print("DEBUG --> Starting merging segments with speaker info")
+        logger.info("Starting merging segments with speaker info")
         final_segments = self._merge_segments_with_diarization(segments, diarization)
-        print("DEBUG --> Segments merged and cleaned")
+        logger.info("Segments merged and cleaned")
 
         return final_segments, detected_num_speakers, transcript_info.language
 
