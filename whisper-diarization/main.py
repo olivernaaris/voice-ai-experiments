@@ -9,6 +9,10 @@ import typer
 from pipeline import WhisperDiarizationPipeline
 from utils import logger, write_json_file
 
+# Custom schemas
+from schema.config import WhisperDiarizationConfig
+from schema.cli import CLIArgs
+
 app = typer.Typer()
 
 
@@ -73,16 +77,12 @@ def main(
     Local runner for Whisper + Diarization.
     """
     logger.debug("Starting pipeline with provided arguments.")
-    pipeline = WhisperDiarizationPipeline(
-        device=device,
-        compute_type=compute_type,
-        model_name=model_name,
-    )
 
-    result = pipeline.predict(
+    # Create CLI arguments model for type-safe configuration
+    cli_args = CLIArgs(
         file_string=file_string,
         file_url=file_url,
-        file_path=str(file_path) if file_path else None,
+        file_path=file_path,
         num_speakers=num_speakers,
         translate=translate,
         language=language,
@@ -93,13 +93,28 @@ def main(
         prop_decrease=prop_decrease,
         stationary=stationary,
         target_dBFS=target_dBFS,
+        device=device,
+        compute_type=compute_type,
+        model_name=model_name,
+        output_filename=output_filename,
     )
 
+    # Create configuration from CLI arguments model
+    config = WhisperDiarizationConfig.from_cli_args(cli_args)
+
+    # Initialize pipeline with model configuration
+    pipeline = WhisperDiarizationPipeline(config.model)
+
+    # Run prediction with full configuration
+    result = pipeline.predict(config)
+
     logger.info(result.model_dump_json(indent=2))
-    if output_filename:
-        output_filename_base = output_filename
+
+    # Handle output
+    if config.output.output_filename:
+        output_filename_base = config.output.output_filename
     else:
-        output_filename_base = Path(__file__).parent / model_name
+        output_filename_base = Path(__file__).parent / config.model.model_name
 
     write_json_file(
         output_filename_base=str(output_filename_base),

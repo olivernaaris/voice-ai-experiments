@@ -1,10 +1,6 @@
-from pydantic import BaseModel, Field
+from pydantic import Field
 
-
-class CustomBaseModel(BaseModel):
-    """A custom base model that uses orjson for serialization."""
-
-    pass
+from .base import CustomBaseModel
 
 
 class Word(CustomBaseModel):

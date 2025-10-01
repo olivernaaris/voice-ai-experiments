@@ -11,7 +11,7 @@ from huggingface_hub.constants import HUGGINGFACE_HUB_CACHE
 from huggingface_hub.utils import GatedRepoError, HfHubHTTPError
 
 # Custom imports
-from utils.token_helper import check_hf_token
+from utils import check_hf_token
 
 
 def download_model(repo_id: str, local_name: str, subfolder: str = "ct2") -> str:

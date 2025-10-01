@@ -12,72 +12,76 @@ from faster_whisper.vad import VadOptions
 
 # Custom imports
 from preprocess import preprocess_audio
-from utils import get_file, get_audio_channels, split_stereo_channels, logger
+from utils import (
+    get_file,
+    get_audio_channels,
+    split_stereo_channels,
+    logger,
+    check_hf_token,
+)
 
 # Custom schemas
 from schema import DiarizationEntry, Output, Segment
+from schema.config import ModelConfig, WhisperDiarizationConfig
 
 
 class WhisperDiarizationPipeline:
     def __init__(
         self,
-        device: str = "cpu",
-        compute_type: str = "int8",
-        model_name: str = "large-v3-turbo",
+        model_config: ModelConfig | None = None,
     ) -> None:
         """Load models into memory."""
 
-        logger.info(f"Setup with {model_name}, {device}, {compute_type}")
-        self.model = WhisperModel(
-            model_size_or_path=model_name,
-            device=device,
-            compute_type=compute_type,
+        if model_config is None:
+            model_config = ModelConfig()
+
+        logger.info(
+            f"Setup with {model_config.model_name}, {model_config.device}, {model_config.compute_type}"
         )
-        token = os.getenv("HF_TOKEN") or os.getenv("HF_AUTH_TOKEN")
-        if token is None:
-            raise ValueError(
-                "Hugging Face token not found. Please set the HF_TOKEN environment variable."
-            )
+        self.model = WhisperModel(
+            model_size_or_path=model_config.model_name,
+            device=model_config.device,
+            compute_type=model_config.compute_type,
+        )
+
+        token = check_hf_token()
         logger.info("Using Hugging Face token for diarization model.")
         self.diarization_model = PyannotePipeline.from_pretrained(
             "pyannote/speaker-diarization-3.1",
             use_auth_token=token,
-        ).to(torch.device(device))
+        ).to(torch.device(model_config.device))
 
     def predict(
         self,
-        file_string: str | None = None,
-        file_url: str | None = None,
-        file_path: str | None = None,
-        num_speakers: int | None = None,
-        translate: bool = False,
-        language: str | None = None,
-        prompt: str | None = None,
-        preprocess: int = 4,
-        highpass_freq: int = 45,
-        lowpass_freq: int = 8000,
-        prop_decrease: float = 1.0,
-        stationary: bool = True,
-        target_dBFS: float = -18.0,
+        config: WhisperDiarizationConfig,
     ) -> Output:
         """Run a single prediction on the model."""
-        temp_input, temp_dir = get_file(file_path, file_url, file_string)
+        # Get input file from configuration
+        input_source = config.file_input.get_input_source()
+        if not input_source:
+            raise ValueError("No input source provided in configuration")
+
+        temp_input, temp_dir = get_file(
+            config.file_input.file_path,
+            config.file_input.file_url,
+            config.file_input.file_string,
+        )
 
         try:
             num_channels = get_audio_channels(temp_input)
             logger.info(f"Audio with {num_channels} channels")
             if num_channels == 1:
                 temp_processed = os.path.join(temp_dir, "input_processed.wav")
-                if preprocess > 0:
+                if config.preprocessing.preprocess > 0:
                     preprocess_audio(
                         temp_input,
                         temp_processed,
-                        preprocess_level=preprocess,
-                        highpass_freq=highpass_freq,
-                        lowpass_freq=lowpass_freq,
-                        prop_decrease=prop_decrease,
-                        stationary=stationary,
-                        target_dBFS=target_dBFS,
+                        preprocess_level=config.preprocessing.preprocess,
+                        highpass_freq=config.preprocessing.highpass_freq,
+                        lowpass_freq=config.preprocessing.lowpass_freq,
+                        prop_decrease=config.preprocessing.prop_decrease,
+                        stationary=config.preprocessing.stationary,
+                        target_dBFS=config.preprocessing.target_dBFS,
                     )
                     audio_for_model = temp_processed
                 else:
@@ -86,7 +90,11 @@ class WhisperDiarizationPipeline:
                 logger.info("Starting transcribing mono")
                 segments, detected_num_speakers, detected_language = (
                     self.speech_to_text(
-                        audio_for_model, num_speakers, prompt or "", language, translate
+                        audio_for_model,
+                        config.transcription.num_speakers,
+                        config.transcription.prompt or "",
+                        config.transcription.language,
+                        config.transcription.translate,
                     )
                 )
                 return Output(
@@ -101,26 +109,26 @@ class WhisperDiarizationPipeline:
                 ch1_proc = os.path.join(temp_dir, "ch1_proc.wav")
                 ch2_proc = os.path.join(temp_dir, "ch2_proc.wav")
 
-                if preprocess > 0:
+                if config.preprocessing.preprocess > 0:
                     preprocess_audio(
                         ch1_path,
                         ch1_proc,
-                        preprocess_level=preprocess,
-                        highpass_freq=highpass_freq,
-                        lowpass_freq=lowpass_freq,
-                        prop_decrease=prop_decrease,
-                        stationary=stationary,
-                        target_dBFS=target_dBFS,
+                        preprocess_level=config.preprocessing.preprocess,
+                        highpass_freq=config.preprocessing.highpass_freq,
+                        lowpass_freq=config.preprocessing.lowpass_freq,
+                        prop_decrease=config.preprocessing.prop_decrease,
+                        stationary=config.preprocessing.stationary,
+                        target_dBFS=config.preprocessing.target_dBFS,
                     )
                     preprocess_audio(
                         ch2_path,
                         ch2_proc,
-                        preprocess_level=preprocess,
-                        highpass_freq=highpass_freq,
-                        lowpass_freq=lowpass_freq,
-                        prop_decrease=prop_decrease,
-                        stationary=stationary,
-                        target_dBFS=target_dBFS,
+                        preprocess_level=config.preprocessing.preprocess,
+                        highpass_freq=config.preprocessing.highpass_freq,
+                        lowpass_freq=config.preprocessing.lowpass_freq,
+                        prop_decrease=config.preprocessing.prop_decrease,
+                        stationary=config.preprocessing.stationary,
+                        target_dBFS=config.preprocessing.target_dBFS,
                     )
                 else:
                     ch1_proc = ch1_path
@@ -129,7 +137,10 @@ class WhisperDiarizationPipeline:
                 logger.info("Starting transcribing stereo channel 0")
                 # ch1_segments, info1 = self._transcribe_audio_ch0_mock(ch1_proc, language, prompt or "", translate)
                 ch1_segments, info1 = self._transcribe_audio(
-                    ch1_proc, language, prompt or "", translate
+                    ch1_proc,
+                    config.transcription.language,
+                    config.transcription.prompt or "",
+                    config.transcription.translate,
                 )
                 for s in ch1_segments:
                     s["speaker"] = "SPEAKER_00"
@@ -139,7 +150,10 @@ class WhisperDiarizationPipeline:
                 logger.info("Starting transcribing stereo channel 1")
                 # ch2_segments, info2 = self._transcribe_audio_ch1_mock(ch2_proc, language, prompt or "", translate)
                 ch2_segments, info2 = self._transcribe_audio(
-                    ch2_proc, language, prompt or "", translate
+                    ch2_proc,
+                    config.transcription.language,
+                    config.transcription.prompt or "",
+                    config.transcription.translate,
                 )
                 for s in ch2_segments:
                     s["speaker"] = "SPEAKER_01"
