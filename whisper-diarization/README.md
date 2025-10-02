@@ -19,9 +19,9 @@
 ## Getting Started
 
 ### 1. Manually approve the following Pyannote Hugging Face models so we can download them
-https://huggingface.co/pyannote/segmentation-3.0
-https://huggingface.co/pyannote/speaker-diarization-3.1
-https://huggingface.co/pyannote/speaker-diarization-community-1
+- https://huggingface.co/pyannote/segmentation-3.0
+- https://huggingface.co/pyannote/speaker-diarization-3.1
+- https://huggingface.co/pyannote/speaker-diarization-community-1
 
 
 ### 2. Download custom fine-tuned Whisper-3 model from Hugging Face
