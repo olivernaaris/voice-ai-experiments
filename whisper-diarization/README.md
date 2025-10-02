@@ -18,7 +18,13 @@
 
 ## Getting Started
 
-### 1. Download a Model
+### 1. Manually approve the following Pyannote Hugging Face models so we can download them
+https://huggingface.co/pyannote/segmentation-3.0
+https://huggingface.co/pyannote/speaker-diarization-3.1
+https://huggingface.co/pyannote/speaker-diarization-community-1
+
+
+### 2. Download custom fine-tuned Whisper-3 model from Hugging Face
 
 First, download a CTranslate2-compatible model using the provided script. For example, to download an Estonian model:
 
@@ -29,7 +35,7 @@ First, download a CTranslate2-compatible model using the provided script. For ex
 --subfolder ct2
 ```
 
-### 2. Run Transcription
+### 3. Run Transcription
 
 Execute the main script with your audio file and the path to the downloaded model.
 
