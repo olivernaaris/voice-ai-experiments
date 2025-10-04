@@ -38,15 +38,28 @@ Metrics Explained:
 import json
 from pathlib import Path
 
+import jiwer
 import typer
 from jiwer import wer, mer, wil, wip, cer
-from jiwer import process_words, visualize_alignment
+from jiwer import process_words, visualize_alignment, Compose
 
 # Custom imports
 from utils.logging import logger
 
 app = typer.Typer(
     help="ASR Evaluation Tool - Compare reference and hypothesis transcriptions"
+)
+
+transforms = Compose(
+    [
+        jiwer.ExpandCommonEnglishContractions(),
+        jiwer.RemoveEmptyStrings(),
+        jiwer.ToLowerCase(),
+        jiwer.RemoveMultipleSpaces(),
+        jiwer.Strip(),
+        jiwer.RemovePunctuation(),
+        jiwer.ReduceToListOfListOfWords(),
+    ]
 )
 
 
@@ -97,6 +110,10 @@ def compute_metrics(reference_text: str, hypothesis_text: str) -> None:
     a complete picture of ASR system performance. All metrics are logged
     to the console with proper formatting.
 
+    Text normalization is applied using the global transforms before computing
+    metrics, which includes: expanding contractions, lowercasing, removing
+    punctuation, and normalizing whitespace.
+
     Args:
         reference_text: Ground truth transcription text.
         hypothesis_text: ASR system output text to evaluate.
@@ -109,22 +126,22 @@ def compute_metrics(reference_text: str, hypothesis_text: str) -> None:
         - CER: Character Error Rate - fine-grained error analysis
     """
     logger.info("=" * 80)
-    logger.info("EVALUATION METRICS:")
+    logger.info("EVALUATION METRICS (with text normalization):")
     logger.info("=" * 80)
     logger.info(
-        f"Word Error Rate (WER):           {wer(reference_text, hypothesis_text):.2%}"
+        f"Word Error Rate (WER):           {wer(reference_text, hypothesis_text, reference_transform=transforms, hypothesis_transform=transforms):.2%}"
     )
     logger.info(
-        f"Match Error Rate (MER):          {mer(reference_text, hypothesis_text):.2%}"
+        f"Match Error Rate (MER):          {mer(reference_text, hypothesis_text, reference_transform=transforms, hypothesis_transform=transforms):.2%}"
     )
     logger.info(
-        f"Word Information Lost (WIL):     {wil(reference_text, hypothesis_text):.2%}"
+        f"Word Information Lost (WIL):     {wil(reference_text, hypothesis_text, reference_transform=transforms, hypothesis_transform=transforms):.2%}"
     )
     logger.info(
-        f"Word Information Preserved (WIP): {wip(reference_text, hypothesis_text):.2%}"
+        f"Word Information Preserved (WIP): {wip(reference_text, hypothesis_text, reference_transform=transforms, hypothesis_transform=transforms):.2%}"
     )
     logger.info(
-        f"Character Error Rate (CER):      {cer(reference_text, hypothesis_text):.2%}"
+        f"Character Error Rate (CER):      {cer(reference_text, hypothesis_text, reference_transform=transforms, hypothesis_transform=transforms):.2%}"
     )
 
 
@@ -134,6 +151,8 @@ def show_alignment(reference_text: str, hypothesis_text: str) -> None:
     Performs alignment analysis and visualizes how words in the hypothesis
     correspond to words in the reference transcription. Categorizes errors
     into substitutions, deletions, and insertions.
+
+    Text normalization is applied before alignment for fair comparison.
 
     Args:
         reference_text: Ground truth transcription text.
@@ -146,14 +165,19 @@ def show_alignment(reference_text: str, hypothesis_text: str) -> None:
         - Count of hits (correctly predicted words)
         - Visual alignment showing matched and mismatched words
     """
-    alignment = process_words(reference_text, hypothesis_text)
+    alignment = process_words(
+        reference_text,
+        hypothesis_text,
+        reference_transform=transforms,
+        hypothesis_transform=transforms,
+    )
     logger.info(f"\nSubstitutions: {alignment.substitutions}")
     logger.info(f"Deletions:     {alignment.deletions}")
     logger.info(f"Insertions:    {alignment.insertions}")
     logger.info(f"Hits:          {alignment.hits}")
 
     logger.info("\n" + "=" * 80)
-    logger.info("WORD-LEVEL ALIGNMENT:")
+    logger.info("WORD-LEVEL ALIGNMENT (normalized text):")
     logger.info("=" * 80)
     logger.info(visualize_alignment(alignment))
 
@@ -166,6 +190,8 @@ def analyze_speakers(reference_data: dict, hypothesis_data: dict) -> None:
     differently for different speakers, which is crucial for evaluating
     diarization quality.
 
+    Text normalization is applied per speaker for consistent comparison.
+
     Args:
         reference_data: Dictionary containing reference segments with speaker labels.
         hypothesis_data: Dictionary containing hypothesis segments with speaker labels.
@@ -176,7 +202,7 @@ def analyze_speakers(reference_data: dict, hypothesis_data: dict) -> None:
         reference and hypothesis for meaningful comparison.
     """
     logger.info("\n" + "=" * 80)
-    logger.info("PER-SPEAKER ANALYSIS:")
+    logger.info("PER-SPEAKER ANALYSIS (with text normalization):")
     logger.info("=" * 80)
 
     ref_speakers = {}
@@ -196,7 +222,9 @@ def analyze_speakers(reference_data: dict, hypothesis_data: dict) -> None:
         hyp_text = " ".join(hyp_speakers.get(speaker, []))
 
         if ref_text and hyp_text:
-            logger.info(f"{speaker}: WER = {wer(ref_text, hyp_text):.2%}")
+            logger.info(
+                f"{speaker}: WER = {wer(ref_text, hyp_text, reference_transform=transforms, hypothesis_transform=transforms):.2%}"
+            )
 
 
 @app.command()
