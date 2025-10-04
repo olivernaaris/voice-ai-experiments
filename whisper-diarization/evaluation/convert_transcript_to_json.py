@@ -17,13 +17,73 @@ import typer
 app = typer.Typer(help="Convert plain text transcripts to JSON format")
 
 
-def parse_transcript(content: str) -> list[dict]:
+# Estonian filler words and patterns
+FILLER_PATTERNS = [
+    # Interjections and acknowledgments
+    r"\bMhm\b",
+    r"\bmhm\b",
+    r"\bAa+\b",  # Aa, Aaa, etc.
+    r"\baa+\b",  # aa, aaa, etc.
+    # Tag questions and discourse markers
+    r"\bvä\b",  # colloquial "isn't it?"
+    r"\bonju\b",  # tag question "right?"
+    # Discourse markers (when standalone or at boundaries)
+    r"\bnoh\b",  # well
+    r"\bNo\b",  # well/so (at start of sentence)
+    # "nagu" as filler (like/you know)
+    r"\bnagu\b",
+    # "jah" when clearly filler (at end after comma or multiple times)
+    r",\s*jah\b",
+    r"\bjah,",
+    r"\bjah\s+jah\b",
+    # Repetitions (word repeated immediately)
+    r"\b(\w+)\s+\1\b",  # catches "see see", "ta ta", "ja ja", etc.
+]
+
+
+def clean_fillers(text: str) -> str:
+    """Remove Estonian filler words from text while preserving meaningful content.
+
+    Args:
+        text: Original text with potential fillers
+
+    Returns:
+        Cleaned text with fillers removed
+    """
+    cleaned = text
+
+    # Remove filler patterns
+    for pattern in FILLER_PATTERNS:
+        # Special handling for repetition pattern
+        if pattern == r"\b(\w+)\s+\1\b":
+            # Replace repeated words with single instance
+            cleaned = re.sub(pattern, r"\1", cleaned, flags=re.IGNORECASE)
+        else:
+            # Remove the filler word
+            cleaned = re.sub(pattern, "", cleaned, flags=re.IGNORECASE)
+
+    # Clean up extra spaces and punctuation
+    cleaned = re.sub(r"\s+", " ", cleaned)  # Multiple spaces to single space
+    cleaned = re.sub(r"\s+([.,!?])", r"\1", cleaned)  # Space before punctuation
+    cleaned = re.sub(r"([.,!?])\s*\1+", r"\1", cleaned)  # Duplicate punctuation
+    cleaned = re.sub(r"^[.,\s]+", "", cleaned)  # Leading punctuation/space
+    cleaned = re.sub(r"[.,\s]+$", "", cleaned)  # Trailing punctuation/space
+
+    # Ensure sentence ends with period if it had content
+    if cleaned and cleaned[-1] not in ".!?":
+        cleaned += "."
+
+    return cleaned.strip()
+
+
+def parse_transcript(content: str, remove_fillers: bool = False) -> list[dict]:
     """Parse transcript with speaker labels and timestamps into segments.
 
     Args:
         content: Raw transcript text with format like:
             Speaker 1 (00:00:00):
             text here
+        remove_fillers: Whether to remove Estonian filler words
 
     Returns:
         List of segment dictionaries with speaker and text fields.
@@ -44,13 +104,19 @@ def parse_transcript(content: str) -> list[dict]:
         if match:
             # Save previous segment if exists
             if current_speaker and current_text:
-                segments.append(
-                    {
-                        "speaker": f"SPEAKER_{current_speaker:02d}",
-                        "timestamp": current_timestamp,
-                        "text": " ".join(current_text).strip(),
-                    }
-                )
+                text = " ".join(current_text).strip()
+                if remove_fillers:
+                    text = clean_fillers(text)
+
+                # Skip empty segments after filler removal
+                if text:
+                    segments.append(
+                        {
+                            "speaker": f"SPEAKER_{current_speaker:02d}",
+                            "timestamp": current_timestamp,
+                            "text": text,
+                        }
+                    )
                 current_text = []
 
             # Start new segment
@@ -64,13 +130,19 @@ def parse_transcript(content: str) -> list[dict]:
 
     # Don't forget the last segment
     if current_speaker and current_text:
-        segments.append(
-            {
-                "speaker": f"SPEAKER_{current_speaker:02d}",
-                "timestamp": current_timestamp,
-                "text": " ".join(current_text).strip(),
-            }
-        )
+        text = " ".join(current_text).strip()
+        if remove_fillers:
+            text = clean_fillers(text)
+
+        # Skip empty segments after filler removal
+        if text:
+            segments.append(
+                {
+                    "speaker": f"SPEAKER_{current_speaker:02d}",
+                    "timestamp": current_timestamp,
+                    "text": text,
+                }
+            )
 
     return segments
 
@@ -93,6 +165,12 @@ def convert(
         "-o",
         help="Output JSON file",
     ),
+    remove_fillers: bool = typer.Option(
+        False,
+        "--remove-fillers",
+        "-f",
+        help="Remove Estonian filler words (mhm, aa, vä, nagu, etc.)",
+    ),
 ) -> None:
     """Convert plain text transcript to JSON format for ASR evaluation."""
 
@@ -103,8 +181,10 @@ def convert(
         content = f.read()
 
     # Parse the transcript
-    segments = parse_transcript(content)
+    segments = parse_transcript(content, remove_fillers=remove_fillers)
 
+    if remove_fillers:
+        typer.echo("Removed filler words from transcript")
     typer.echo(f"Parsed {len(segments)} segments")
 
     # Create output structure
@@ -114,7 +194,7 @@ def convert(
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(output_data, f, indent=2, ensure_ascii=False)
 
-    typer.echo(f"✓ Saved JSON to: {output_file}")
+    typer.echo(f"Saved JSON to: {output_file}")
 
     # Show preview
     typer.echo("\nFirst segment preview:")
