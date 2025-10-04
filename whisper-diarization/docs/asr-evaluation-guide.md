@@ -16,8 +16,8 @@ If you have a plain text transcript with speaker labels, first convert it to JSO
 
 ```bash
 ./evaluation/convert_transcript_to_json.py \
-    --input input-2min-wav-et.txt \
-    --output reference-2min-wav-et.json
+    --input evaluation/input-2min-wav-et.txt \
+    --output evaluation/reference-2min-wav-et.json
 ```
 
 This will create a JSON file with the following structure:
