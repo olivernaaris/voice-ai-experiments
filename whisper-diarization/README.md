@@ -41,19 +41,18 @@ Execute the main script with your audio file and the path to the downloaded mode
 
 ```bash
 ./main.py \
---file_path tmpyegdo2jo.wav \
+--file_path audio_files/2min-wav-et.wav \
 --device cpu \
 --language et \
 --preprocess 4 \
---num_speakers 3 \
 --model_name /Users/olivernaaris/.cache/huggingface/hub/whisper-large-v3-turbo-et-verbatim-ct2/ct2 \
 --output_filename whisper-large-v3-turbo-et-verbatim-ct2
 ```
 
----
 
 ## Documentation
 - **[Architecture Overview](./docs/whisper-diarization-architecture.md):** A deep dive into the project's features, architecture, and configuration options.
+- **[ASR Evaluation](./docs/asr-evaluation-guide.md):** How to evaluate the ASR models output error rates.
 
 ## Thanks to
 https://github.com/rafaelgalle/whisper-diarization-advanced/tree/main

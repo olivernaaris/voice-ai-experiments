@@ -1,7 +1,11 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "whisper-diarization"
 version = "0.1.0"
-description = "whisper-diarization prototpye."
+description = "whisper-diarization prototype."
 readme = "README.md"
 requires-python = "==3.10.*"
 dependencies = [
@@ -27,4 +31,11 @@ dependencies = [
     "optimum>=1.27.0",
     "huggingface-hub>=0.24.1",
     "pydantic>=2.0",
+    "jiwer>=4.0.0",
 ]
+
+[project.scripts]
+whisper-diarize = "main:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["schema", "utils"]
