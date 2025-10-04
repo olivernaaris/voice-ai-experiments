@@ -1,14 +1,12 @@
 import os
 import time
 import torch
-import torchaudio
 import shutil
 import re
 import pandas as pd
 import numpy as np
 from faster_whisper import WhisperModel
 from pyannote.audio import Pipeline as PyannotePipeline
-from pyannote.audio.pipelines.utils.hook import ProgressHook
 from faster_whisper.vad import VadOptions
 
 # Custom imports
@@ -19,6 +17,7 @@ from utils import (
     split_stereo_channels,
     logger,
     check_hf_token,
+    diarize_audio,
 )
 
 # Custom schemas
@@ -215,9 +214,8 @@ class WhisperDiarizationPipeline:
         logger.info(f"Finished transcribing, {len(segments)} segments")
 
         logger.info("Starting diarization")
-        # diarization, detected_num_speakers = self._diarize_audio_mock(
-        diarization, detected_num_speakers = self._diarize_audio(
-            audio_file_wav, num_speakers
+        diarization, detected_num_speakers = diarize_audio(
+            self.diarization_model, audio_file_wav, num_speakers
         )
         logger.info(f"Finished diarization, {detected_num_speakers} speakers detected")
 
@@ -265,28 +263,6 @@ class WhisperDiarizationPipeline:
             for s in segments
         ]
         return segments, transcript_info
-
-    def _diarize_audio(self, audio_file_wav, num_speakers=None):
-        waveform, sample_rate = torchaudio.load(audio_file_wav)
-        with ProgressHook() as hook:
-            diarization = self.diarization_model(
-                {"waveform": waveform, "sample_rate": sample_rate},
-                num_speakers=num_speakers,
-                hook=hook,
-            )
-
-        diarize_segments = []
-        annotation = diarization.speaker_diarization
-        diarization_list = list(annotation.itertracks(yield_label=True))
-        for turn, _, speaker in diarization_list:
-            diarize_segments.append(
-                {"start": turn.start, "end": turn.end, "speaker": speaker}
-            )
-
-        unique_speakers = {speaker for _, _, speaker in diarization_list}
-        detected_num_speakers = len(unique_speakers)
-
-        return diarize_segments, detected_num_speakers
 
     def _assign_speaker_to_segment_or_word(
         self, segment_or_word, diarize_df, fallback_speaker=None
