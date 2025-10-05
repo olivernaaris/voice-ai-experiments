@@ -58,6 +58,7 @@ transforms = Compose(
         jiwer.RemoveMultipleSpaces(),
         jiwer.Strip(),
         jiwer.RemovePunctuation(),
+        jiwer.ReduceToSingleSentence(),
         jiwer.ReduceToListOfListOfWords(),
     ]
 )
@@ -80,17 +81,17 @@ def load_json_file(file_path: Path) -> dict:
         return json.load(f)
 
 
-def extract_text_from_segments(segments: list[dict]) -> str:
-    """Extract and concatenate text from transcription segments.
+def extract_text_from_segments(segments: list[dict]) -> list[str]:
+    """Extract text from each segment as separate sentences.
 
-    Processes a list of segment dictionaries and combines their text content
-    into a single string, with segments separated by spaces.
+    Returns a list of individual segment texts instead of concatenating them.
+    This allows jiwer to compare segments one-by-one for better alignment.
 
     Args:
         segments: List of segment dictionaries, each containing a 'text' key.
 
     Returns:
-        Single string with all segment texts concatenated and whitespace normalized.
+        List of strings, one per segment.
 
     Example:
         >>> segments = [
@@ -98,12 +99,74 @@ def extract_text_from_segments(segments: list[dict]) -> str:
         ...     {"text": "world ", "speaker": "SPEAKER_01"}
         ... ]
         >>> extract_text_from_segments(segments)
-        'Hello world'
+        ['Hello', 'world']
     """
-    return " ".join([segment["text"].strip() for segment in segments])
+    return [segment["text"].strip() for segment in segments]
 
 
-def compute_metrics(reference_text: str, hypothesis_text: str) -> None:
+def align_segments_by_timing(
+    reference_segments: list[dict],
+    hypothesis_segments: list[dict],
+    tolerance: float = 1.0,
+) -> tuple[list[str], list[str]]:
+    """Align segments by timing to handle different numbers of segments.
+
+    Uses a simple greedy algorithm to match hypothesis segments to reference
+    segments based on temporal overlap. This handles cases where the ASR system
+    produces different segmentation than the reference annotation.
+
+    Args:
+        reference_segments: Reference segments with timing information
+        hypothesis_segments: Hypothesis segments with timing information
+        tolerance: Maximum time gap allowed for matching segments (in seconds)
+
+    Returns:
+        Tuple of (aligned_reference_texts, aligned_hypothesis_texts) with
+        matching lengths for jiwer evaluation.
+    """
+    ref_texts = []
+    hyp_texts = []
+
+    ref_idx = 0
+    hyp_idx = 0
+
+    while ref_idx < len(reference_segments) and hyp_idx < len(hypothesis_segments):
+        ref_seg = reference_segments[ref_idx]
+        hyp_seg = hypothesis_segments[hyp_idx]
+
+        # Check for temporal overlap
+        ref_start = ref_seg.get("start", 0)
+        ref_end = ref_seg.get("end", 0)
+        hyp_start = hyp_seg.get("start", 0)
+        hyp_end = hyp_seg.get("end", 0)
+
+        # Check if segments overlap significantly
+        overlap_start = max(ref_start, hyp_start)
+        overlap_end = min(ref_end, hyp_end)
+
+        if overlap_end - overlap_start > 0:
+            # Segments overlap, include them in evaluation
+            ref_texts.append(ref_seg["text"].strip())
+            hyp_texts.append(hyp_seg["text"].strip())
+            ref_idx += 1
+            hyp_idx += 1
+        elif hyp_end < ref_start - tolerance:
+            # Hypothesis segment is before reference segment
+            hyp_idx += 1
+        elif ref_end < hyp_start - tolerance:
+            # Reference segment is before hypothesis segment
+            ref_idx += 1
+        else:
+            # No clear temporal relationship, advance the one that ends first
+            if ref_end < hyp_end:
+                ref_idx += 1
+            else:
+                hyp_idx += 1
+
+    return ref_texts, hyp_texts
+
+
+def compute_metrics(reference_text: list, hypothesis_text: list) -> None:
     """Compute and log comprehensive ASR evaluation metrics.
 
     Calculates multiple error rates and information metrics to provide
@@ -145,7 +208,7 @@ def compute_metrics(reference_text: str, hypothesis_text: str) -> None:
     )
 
 
-def show_alignment(reference_text: str, hypothesis_text: str) -> None:
+def show_alignment(reference_text: list, hypothesis_text: list) -> None:
     """Show detailed word-level alignment between reference and hypothesis.
 
     Performs alignment analysis and visualizes how words in the hypothesis

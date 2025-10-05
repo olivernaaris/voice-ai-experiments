@@ -15,7 +15,7 @@ The evaluation process requires two JSON files:
 If you have a plain text transcript with speaker labels, first convert it to JSON:
 
 ```bash
-./evaluation/convert_transcript_to_json.py \
+./evaluation/convert_text_transcript_to_json.py \
     --input evaluation/input-2min-wav-et.txt \
     --output evaluation/reference-2min-wav-et.json
 ```
@@ -33,7 +33,11 @@ This will create a JSON file with the following structure:
 }
 ```
 
-### Step 2: Get Your Hypothesis File
+### Step 2: Cleanup your Hypothesis File JSON
+
+./cleanup_transcript.py \
+ --input ../whisper-large-v3-turbo-et-verbatim-ct2_20251004_141446.json \
+ --output evaluation/cleaned_output_whisper-large-v3-turbo-et-verbatim-ct2_20251004_141446.json
 
 You need a hypothesis file (the ASR system output to evaluate). This should be in the same JSON format:
 
@@ -57,7 +61,7 @@ Once you have both files, run the evaluation:
 ```bash
 ./evaluation/test_asr_evaluation.py \
     --reference-file ./evaluation/reference-2min-wav-et.json \
-    --hypothesis-file whisper-large-v3-turbo-et-verbatim-ct2_20251004_101222.json
+    --hypothesis-file ./evaluation/hypothesis_whisper-large-v3-turbo-et-verbatim-ct2_20251004_141446.json
 ```
 ```
 

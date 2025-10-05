@@ -20,13 +20,15 @@ app = typer.Typer()
 def main(
     file_string: Annotated[
         Optional[str],
-        typer.Option("--file_string", help="File content as a base64 encoded string."),
+        typer.Option(
+            "--input-filestring", help="File content as a base64 encoded string."
+        ),
     ] = None,
     file_url: Annotated[
-        Optional[str], typer.Option("--file_url", help="URL to an audio file.")
+        Optional[str], typer.Option("--input-fileurl", help="URL to an audio file.")
     ] = None,
     file_path: Annotated[
-        Optional[Path], typer.Option("--file_path", help="Path to an audio file.")
+        Optional[Path], typer.Option("--input-filepath", help="Path to an audio file.")
     ] = None,
     num_speakers: Annotated[
         Optional[int], typer.Option("--num_speakers", help="Number of speakers.")
@@ -45,32 +47,32 @@ def main(
         typer.Option(help="Preprocessing level (0-4).", min=0, max=4, clamp=True),
     ] = 0,
     highpass_freq: Annotated[
-        int, typer.Option("--highpass_freq", help="Highpass filter frequency.")
+        int, typer.Option("--highpass-freq", help="Highpass filter frequency.")
     ] = 45,
     lowpass_freq: Annotated[
-        int, typer.Option("--lowpass_freq", help="Lowpass filter frequency.")
+        int, typer.Option("--lowpass-freq", help="Lowpass filter frequency.")
     ] = 8000,
     prop_decrease: Annotated[
-        float, typer.Option("--prop_decrease", help="Proportion to decrease noise.")
+        float, typer.Option("--prop-decrease", help="Proportion to decrease noise.")
     ] = 0.3,
     stationary: Annotated[
         bool, typer.Option(help="Whether the noise is stationary.")
     ] = True,
     target_dBFS: Annotated[
-        float, typer.Option("--target_dBFS", help="Target dBFS for normalization.")
+        float, typer.Option("--target-dBFS", help="Target dBFS for normalization.")
     ] = -18.0,
     device: Annotated[
         str, typer.Option(help="Device to use for computation (cpu or cuda).")
     ] = "cpu",
     compute_type: Annotated[
-        str, typer.Option("--compute_type", help="Compute type for the model.")
+        str, typer.Option("--compute-type", help="Compute type for the model.")
     ] = "int8",
     model_name: Annotated[
-        str, typer.Option("--model_name", help="Name of the Whisper model to use.")
+        str, typer.Option("--model-name", help="Name of the Whisper model to use.")
     ] = "whisper-large-v3-turbo-et-verbatim-ct2",
     output_filename: Annotated[
         Optional[str],
-        typer.Option("--output_filename", help="Base name for the output JSON file."),
+        typer.Option("--output-filepath", help="Base name for the output JSON file."),
     ] = None,
 ) -> None:
     """

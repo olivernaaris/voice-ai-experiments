@@ -41,12 +41,12 @@ Execute the main script with your audio file and the path to the downloaded mode
 
 ```bash
 ./main.py \
---file_path audio_files/2min-wav-et.wav \
+--input-filepath audio_files/2min-wav-et.wav \
 --device cpu \
 --language et \
 --preprocess 4 \
---model_name /Users/olivernaaris/.cache/huggingface/hub/whisper-large-v3-turbo-et-verbatim-ct2/ct2 \
---output_filename whisper-large-v3-turbo-et-verbatim-ct2
+--model-name /Users/olivernaaris/.cache/huggingface/hub/whisper-large-v3-turbo-et-verbatim-ct2/ct2 \
+--output-filepath evaluation/whisper-large-v3-turbo-et-verbatim-ct2
 ```
 
 

@@ -3,9 +3,6 @@
 
 This utility converts transcripts with speaker labels and timestamps
 into the JSON format required by test_asr_evaluation.py.
-
-Usage:
-    ./convert_transcript_to_json.py --input transcript.txt --output reference.json
 """
 
 import json
@@ -112,7 +109,7 @@ def parse_transcript(content: str, remove_fillers: bool = False) -> list[dict]:
                 if text:
                     segments.append(
                         {
-                            "speaker": f"SPEAKER_{current_speaker:02d}",
+                            "speaker": f"SPEAKER_{current_speaker}",
                             "timestamp": current_timestamp,
                             "text": text,
                         }
@@ -138,7 +135,7 @@ def parse_transcript(content: str, remove_fillers: bool = False) -> list[dict]:
         if text:
             segments.append(
                 {
-                    "speaker": f"SPEAKER_{current_speaker:02d}",
+                    "speaker": f"SPEAKER_{current_speaker}",
                     "timestamp": current_timestamp,
                     "text": text,
                 }
