@@ -76,43 +76,34 @@ def get_audio_channels(file_path: str) -> int:
 
 
 def split_stereo_channels(file_path: str, temp_dir: str) -> tuple[str, str]:
-    """Splits stereo audio into two mono files (left and right channel)."""
+    """Splits stereo audio into two mono files (left and right channel).
+    
+    Uses modern FFmpeg channelsplit filter (compatible with FFmpeg 5+).
+    The -map_channel option was deprecated and removed in FFmpeg 5.
+    """
     ch1_path = os.path.join(temp_dir, "channel1.wav")
     ch2_path = os.path.join(temp_dir, "channel2.wav")
 
+    # Use channelsplit filter with filter_complex for modern FFmpeg
     subprocess.run(
         [
             "ffmpeg",
             "-y",
             "-i",
             file_path,
-            "-map_channel",
-            "0.0.0",
+            "-filter_complex",
+            "channelsplit=channel_layout=stereo[L][R]",
+            "-map",
+            "[L]",
             "-acodec",
             "pcm_s16le",
-            "-ac",
-            "1",
             "-ar",
             "16000",
             ch1_path,
-        ],
-        check=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-
-    subprocess.run(
-        [
-            "ffmpeg",
-            "-y",
-            "-i",
-            file_path,
-            "-map_channel",
-            "0.0.1",
+            "-map",
+            "[R]",
             "-acodec",
             "pcm_s16le",
-            "-ac",
-            "1",
             "-ar",
             "16000",
             ch2_path,

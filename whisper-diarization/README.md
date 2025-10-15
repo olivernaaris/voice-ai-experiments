@@ -35,7 +35,7 @@ First, download a CTranslate2-compatible model using the provided script. For ex
 --subfolder ct2
 ```
 
-### 3. Run Transcription
+### 3. Run Transcription and Diarization
 
 Execute the main script with your audio file and the path to the downloaded model.
 
@@ -53,6 +53,7 @@ Execute the main script with your audio file and the path to the downloaded mode
 ## Documentation
 - **[Architecture Overview](./docs/whisper-diarization-architecture.md):** A deep dive into the project's features, architecture, and configuration options.
 - **[ASR Evaluation](./docs/asr-evaluation-guide.md):** How to evaluate the ASR models output error rates.
+- **[Please read](https://medium.com/@rafaelgalle1/building-a-custom-scalable-audio-transcription-pipeline-whisper-pyannote-ffmpeg-d0f03f884330)
 
 ## Thanks to
 https://github.com/rafaelgalle/whisper-diarization-advanced/tree/main
