@@ -49,6 +49,18 @@ Execute the main script with your audio file and the path to the downloaded mode
 --output-filepath evaluation/whisper-large-v3-turbo-et-verbatim-ct2
 ```
 
+### 4. Run Transcription and Diarization profiler to time execution
+```bash
+uv run python -m cProfile -s time \
+./main.py \
+--input-filepath audio_files/2min-wav-et.wav \
+--device cpu \
+--language et \
+--preprocess 4 \
+--model-name /Users/olivernaaris/.cache/huggingface/hub/whisper-large-v3-turbo-et-verbatim-ct2/ct2 \
+--output-filepath evaluation/whisper-large-v3-turbo-et-verbatim-ct2
+```
+
 
 ## Documentation
 - **[Architecture Overview](./docs/whisper-diarization-architecture.md):** A deep dive into the project's features, architecture, and configuration options.
